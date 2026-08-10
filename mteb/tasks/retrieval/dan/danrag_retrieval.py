@@ -21,83 +21,65 @@ _CITATION = r"""
 
 
 def _load_danrag_data(
-    path: str,
-    revision: str,
-    splits: list[str],
+    task: AbsTaskRetrieval,
     include_text: bool,
     num_proc: int | None,
-) -> dict[str, dict[str, dict[str, Any]]]:
+    timer: TimingStack | None = None,
+) -> None:
+    if task.data_loaded:
+        return
+
+    path = task.metadata.dataset["path"]
+    revision = task.metadata.dataset["revision"]
+    splits = task.metadata.eval_splits
     dataset: dict[str, dict[str, dict[str, Any]]] = {"default": {}}
 
-    for split in splits:
-        corpus_columns = ["page_id", "image"]
-        if include_text:
-            corpus_columns.insert(1, "text")
+    timer = timer or TimingStack()
+    with timer("Data loading", log_message=f"Loading dataset {task.metadata.name}..."):
+        for split in splits:
+            corpus_columns = ["page_id", "image"]
+            if include_text:
+                corpus_columns.insert(1, "text")
 
-        corpus = load_dataset(
-            path,
-            data_files={split: "corpus/*.parquet"},
-            split=split,
-            revision=revision,
-            num_proc=num_proc,
-        )
-        corpus = corpus.select_columns(corpus_columns).rename_column("page_id", "id")
-
-        raw_queries = load_dataset(
-            path,
-            data_files={split: "queries/*.parquet"},
-            split=split,
-            revision=revision,
-            num_proc=num_proc,
-        )
-        queries = raw_queries.select_columns(["id", "query"]).rename_column(
-            "query", "text"
-        )
-        relevant_docs = {
-            query_id: dict.fromkeys(valid_pages, 1)
-            for query_id, valid_pages in zip(
-                raw_queries["id"], raw_queries["valid_pages"]
-            )
-        }
-
-        dataset["default"][split] = {
-            "corpus": corpus,
-            "queries": queries,
-            "relevant_docs": relevant_docs,
-            "top_ranked": None,
-        }
-
-    return dataset
-
-
-class _DanRAGRetrievalMixin:
-    include_text: bool
-
-    def load_data(
-        self,
-        num_proc: int | None = None,
-        *,
-        timer: TimingStack | None = None,
-        **kwargs: Any,
-    ) -> None:
-        if self.data_loaded:
-            return
-
-        timer = timer or TimingStack()
-        with timer(
-            "Data loading", log_message=f"Loading dataset {self.metadata.name}..."
-        ):
-            self.dataset = _load_danrag_data(
-                path=self.metadata.dataset["path"],
-                revision=self.metadata.dataset["revision"],
-                splits=self.metadata.eval_splits,
-                include_text=self.include_text,
+            corpus = load_dataset(
+                path,
+                data_files={split: "corpus/*.parquet"},
+                split=split,
+                revision=revision,
                 num_proc=num_proc,
             )
+            corpus = corpus.select_columns(corpus_columns).rename_column(
+                "page_id", "id"
+            )
 
-        with timer("Dataset transform"):
-            self.dataset_transform(num_proc=num_proc)
-        self.data_loaded = True
+            raw_queries = load_dataset(
+                path,
+                data_files={split: "queries/*.parquet"},
+                split=split,
+                revision=revision,
+                num_proc=num_proc,
+            )
+            queries = raw_queries.select_columns(["id", "query"]).rename_column(
+                "query", "text"
+            )
+            relevant_docs = {
+                query_id: dict.fromkeys(valid_pages, 1)
+                for query_id, valid_pages in zip(
+                    raw_queries["id"], raw_queries["valid_pages"]
+                )
+            }
+
+            dataset["default"][split] = {
+                "corpus": corpus,
+                "queries": queries,
+                "relevant_docs": relevant_docs,
+                "top_ranked": None,
+            }
+
+        task.dataset = dataset
+    with timer("Dataset transform"):
+        task.dataset_transform(num_proc=num_proc)
+    task.data_loaded = True
 
 
 _COMMON_METADATA = {
@@ -123,8 +105,7 @@ _COMMON_METADATA = {
 }
 
 
-class DanRAGT2IRetrieval(_DanRAGRetrievalMixin, AbsTaskRetrieval):
-    include_text = False
+class DanRAGT2IRetrieval(AbsTaskRetrieval):
     metadata = TaskMetadata(
         name="DanRAGT2IRetrieval",
         description="DanRAG-Bench evaluates Danish visual document retrieval over 349 page images from eight public-sector documents spanning energy, finance, health, law, and municipalities. Its 471 manually verified queries ask for factual information; the retrieval goal is to find every page containing evidence for each answer.",
@@ -133,9 +114,17 @@ class DanRAGT2IRetrieval(_DanRAGRetrievalMixin, AbsTaskRetrieval):
         **_COMMON_METADATA,
     )
 
+    def load_data(
+        self,
+        num_proc: int | None = None,
+        *,
+        timer: TimingStack | None = None,
+        **kwargs: Any,
+    ) -> None:
+        _load_danrag_data(self, include_text=False, num_proc=num_proc, timer=timer)
 
-class DanRAGT2ITRetrieval(_DanRAGRetrievalMixin, AbsTaskRetrieval):
-    include_text = True
+
+class DanRAGT2ITRetrieval(AbsTaskRetrieval):
     metadata = TaskMetadata(
         name="DanRAGT2ITRetrieval",
         description="DanRAG-Bench evaluates Danish multimodal document retrieval over the extracted text and page images of 349 pages from eight public-sector documents spanning energy, finance, health, law, and municipalities. Its 471 manually verified queries ask for factual information; the retrieval goal is to find every page containing evidence for each answer.",
@@ -145,3 +134,12 @@ class DanRAGT2ITRetrieval(_DanRAGRetrievalMixin, AbsTaskRetrieval):
         },
         **_COMMON_METADATA,
     )
+
+    def load_data(
+        self,
+        num_proc: int | None = None,
+        *,
+        timer: TimingStack | None = None,
+        **kwargs: Any,
+    ) -> None:
+        _load_danrag_data(self, include_text=True, num_proc=num_proc, timer=timer)
