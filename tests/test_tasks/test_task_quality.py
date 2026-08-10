@@ -191,6 +191,9 @@ KNOWN_ISSUES: dict[str, list[str]] = {
         "MKQARetrieval",
         "MLQuestions",
         "MMDocIRT2ITRetrieval",
+        "MMBrightIT2ITRetrieval",  # some image-backed corpus rows have empty text
+        "MMBrightIT2TRetrieval",  # some source corpus rows have empty text
+        "MMBrightT2TRetrieval",  # some source corpus rows have empty text
         "MMVUVideoCentricQA",
         "MMarcoRetrieval",
         "MSMARCO",
@@ -511,6 +514,10 @@ KNOWN_ISSUES: dict[str, list[str]] = {
         "MLSUMClusteringP2P",
         "MLSUMClusteringS2S",
         "MLSUMClusteringS2S.v2",
+        "MMBrightIT2IRetrieval",  # source contains repeated passages/queries
+        "MMBrightIT2ITRetrieval",
+        "MMBrightIT2TRetrieval",
+        "MMBrightT2TRetrieval",
         "MMVUVideoCentricQA",
         "MMarcoReranking",
         "MSMARCOv2",
@@ -805,6 +812,9 @@ KNOWN_ISSUES: dict[str, list[str]] = {
         "InfoSeekIT2TRetrieval",
         "LLaVAIT2TRetrieval",
         "MomentSeekerTI2VRetrieval",
+        "MMBrightIT2IRetrieval",  # source images are intentionally reused
+        "MMBrightIT2ITRetrieval",
+        "MMBrightIT2TRetrieval",
         "OVENIT2ITRetrieval",
         "PatchCamelyon",  # adjacent, overlapping WSI patches are inherent to the source data
         "PatchCamelyonZeroShot",  # adjacent, overlapping WSI patches are inherent to the source data
@@ -880,9 +890,12 @@ KNOWN_ISSUES: dict[str, list[str]] = {
         "FORBI2IRetrieval",  # min 1x1px query image present
         "GLDv2I2IRetrieval",  # min 7x7px document image present
         "Imagenet1k",  # min 8x10px image present
+        "MMBrightIT2IRetrieval",  # source-faithful corpus includes 1x1 images
+        "MMBrightIT2ITRetrieval",  # source-faithful corpus includes 1x1 images
     ],
     "zero_relevant_docs": [
         "BrightRetrieval",
+        "MMBrightIT2IRetrieval",  # released missing-image queries have no image qrel
         "TwitterHjerneRetrieval",
     ],
     "impossible_unique_count": [
@@ -897,6 +910,9 @@ KNOWN_ISSUES: dict[str, list[str]] = {
         "AROVisualAttribution",  # correct + distractor attribution captions per example
         "AROVisualRelation",  # correct + distractor relation captions per example
         "ImageCoDe",  # multiple candidate images per example
+        "MMBrightIT2IRetrieval",  # queries can contain multiple images
+        "MMBrightIT2ITRetrieval",
+        "MMBrightIT2TRetrieval",
         "SugarCrepe",  # correct + hard-negative captions per example
         "Winoground",  # exactly 2 texts and 2 images per example (400 samples -> 800 of each)
         # Genuine stats-generation inconsistency: unique_texts exceeds the
